@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"regexp"
 	"sort"
@@ -14,9 +15,9 @@ type date struct {
 }
 
 type guard struct {
-	id int
-	date
+	dates        []date
 	sleepCounter map[int]int
+	totalSleep   int
 }
 
 func main() {
@@ -28,11 +29,19 @@ func main() {
 	}
 
 	sort.Strings(schedule)
-	var guards []guard
+
+	guards := make(map[int]guard)
+
 	id := 0
 	for _, line := range schedule {
 		var d date
 		var g guard
+
+		if strings.Contains(line, "falls asleep") {
+			d.sleep = true
+		} else {
+			d.sleep = false
+		}
 
 		re, _ := regexp.Compile(`^\[([0-9]+)-`)
 		match := re.FindStringSubmatch(line)
@@ -54,21 +63,59 @@ func main() {
 		match = re.FindStringSubmatch(line)
 		d.minute, _ = strconv.Atoi(match[1])
 
-		if strings.Contains(line, "wakes up") && strings.Contains(line, "begins shift") {
-			d.sleep = false
-		} else {
-			d.sleep = true
-		}
-
 		if strings.Contains(line, "begins shift") {
 			re, _ = regexp.Compile(`#([0-9]+) `)
 			match = re.FindStringSubmatch(line)
-			g.id, _ = strconv.Atoi(match[1])
-			id = g.id
+			id, _ = strconv.Atoi(match[1])
+			if g.sleepCounter == nil {
+				g.sleepCounter = make(map[int]int)
+			}
+			g.sleepCounter[d.minute] = 0
+			g.totalSleep = 0
+			g.dates = append(g.dates, d)
+			guards[id] = g
 		} else {
-			g.id = id
+			if _, exists := guards[id].sleepCounter[d.minute]; exists {
+				guards[id].sleepCounter[d.minute]++
+			} else {
+				guards[id].sleepCounter[d.minute] = 1
+			}
+			g = guards[id]
+			g.totalSleep++
+
+			g.dates = append(guards[id].dates, d)
+			guards[id] = g
 		}
-		guards.date = d
-		guards = append(guards, g)
+
 	}
+
+	for _, guard := range guards {
+		for _, dat := range guard.dates {
+			var d date
+			d.year = dat.year
+			d.month = dat.month
+			d.day = dat.day
+			d.hour = dat.hour
+			d.minute = dat.minute + 1
+			if dat.sleep == false {
+				d.sleep = false
+			} else {
+				d.sleep = true
+				if _, exists := guard.sleepCounter[d.minute]; exists {
+					guard.sleepCounter[d.minute]++
+					guard.totalSleep++
+				}
+			}
+		}
+	}
+	sleepiestGuard := 0
+	for key, guard := range guards {
+		if sleepiestGuard == 0 {
+			sleepiestGuard = key
+		}
+		if guard.totalSleep > guards[sleepiestGuard].totalSleep {
+			sleepiestGuard = key
+		}
+	}
+	fmt.Println(sleepiestGuard)
 }
