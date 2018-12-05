@@ -17,29 +17,70 @@ func isUpper(r rune) bool {
 func reducePolymer(polymer []rune) []rune {
 	var first, second bool
 	var tempFirst, tempSecond rune
-	var newPolymer []rune
 	for i := range polymer {
 		if i > len(polymer)-2 {
-			return newPolymer
+			return polymer
 		}
+
 		first, second = false, false
+
 		if isUpper(polymer[i]) {
 			first = true
 			tempFirst = polymer[i]
 		} else {
 			tempFirst = unicode.ToUpper(polymer[i])
 		}
+
 		if isUpper(polymer[i+1]) {
 			second = true
+			tempSecond = polymer[i+1]
 		} else {
 			tempSecond = unicode.ToUpper(polymer[i+1])
 		}
+
 		if tempFirst == tempSecond && first != second {
+			polymer = append(polymer[:i], polymer[i+2:]...)
+			break
+		}
+
+	}
+	return polymer
+}
+
+func removeUnit(polymer []rune, unit rune) []rune {
+	var first, second bool
+	var tempFirst, tempSecond rune
+	for i := range polymer {
+		if i > len(polymer)-2 {
+			return polymer
+		}
+		first, second = false, false
+
+		if isUpper(polymer[i]) {
+			first = true
+			tempFirst = polymer[i]
+		} else {
+			tempFirst = unicode.ToUpper(polymer[i])
+		}
+
+		if isUpper(polymer[i+1]) {
+			second = true
+			tempSecond = polymer[i+1]
+		} else {
+			tempSecond = unicode.ToUpper(polymer[i+1])
+		}
+
+		if tempFirst != unit && tempSecond != unit {
 			continue
 		}
-		newPolymer = append(newPolymer, tempFirst)
+
+		if tempFirst == tempSecond && first != second {
+			polymer = append(polymer[:i], polymer[i+2:]...)
+			break
+		}
+
 	}
-	return newPolymer
+	return polymer
 }
 
 func main() {
@@ -50,16 +91,35 @@ func main() {
 		s = scan.Text()
 
 	}
+
 	var newPolymer, polymer []rune
 	polymer = []rune(s)
-
+	counter := len(polymer)
 	for {
 		newPolymer = reducePolymer(polymer)
 		if string(polymer) == string(newPolymer) {
-			fmt.Println(polymer)
+			fmt.Println(len(polymer))
 			break
 		} else {
 			polymer = newPolymer
 		}
 	}
+	for i := rune('A'); i <= rune('Z'); i++ {
+		polymer = []rune(s)
+		fmt.Println(string(i))
+		for {
+			newPolymer = removeUnit(polymer, rune(i))
+			if string(polymer) == string(newPolymer) {
+				if len(polymer) < counter {
+					counter = len(polymer)
+					fmt.Println(counter)
+				}
+				break
+			} else {
+				polymer = newPolymer
+			}
+		}
+	}
+	fmt.Println(counter)
+
 }
