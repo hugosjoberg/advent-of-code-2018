@@ -7,17 +7,18 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type date struct {
-	year, month, day, hour, minute int
-	sleep                          bool
+	time  []time.Time
+	sleep bool
 }
-
 type guard struct {
-	dates        []date
+	date         time.Time
+	id           int
+	sleep        string
 	sleepCounter map[int]int
-	totalSleep   int
 }
 
 func main() {
@@ -30,92 +31,124 @@ func main() {
 
 	sort.Strings(schedule)
 
-	guards := make(map[int]guard)
+	var guards []guard
 
 	id := 0
 	for _, line := range schedule {
-		var d date
-		var g guard
 
-		if strings.Contains(line, "falls asleep") {
-			d.sleep = true
-		} else {
-			d.sleep = false
-		}
+		var g guard
+		var year, month, day, hour, minute int
 
 		re, _ := regexp.Compile(`^\[([0-9]+)-`)
 		match := re.FindStringSubmatch(line)
-		d.year, _ = strconv.Atoi(match[1])
+		year, _ = strconv.Atoi(match[1])
 
 		re, _ = regexp.Compile(`-([0-9]+)-`)
 		match = re.FindStringSubmatch(line)
-		d.month, _ = strconv.Atoi(match[1])
+		month, _ = strconv.Atoi(match[1])
 
 		re, _ = regexp.Compile(`-([0-9]+) `)
 		match = re.FindStringSubmatch(line)
-		d.day, _ = strconv.Atoi(match[1])
+		day, _ = strconv.Atoi(match[1])
 
 		re, _ = regexp.Compile(` ([0-9]+):`)
 		match = re.FindStringSubmatch(line)
-		d.hour, _ = strconv.Atoi(match[1])
+		hour, _ = strconv.Atoi(match[1])
 
 		re, _ = regexp.Compile(`:([0-9]+)\]`)
 		match = re.FindStringSubmatch(line)
-		d.minute, _ = strconv.Atoi(match[1])
+		minute, _ = strconv.Atoi(match[1])
+		g.date = time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.UTC)
+
+		if strings.Contains(line, "falls asleep") {
+			g.sleep = "sleeps"
+		} else if strings.Contains(line, "wakes up") {
+			g.sleep = "wakes"
+		}
 
 		if strings.Contains(line, "begins shift") {
 			re, _ = regexp.Compile(`#([0-9]+) `)
 			match = re.FindStringSubmatch(line)
 			id, _ = strconv.Atoi(match[1])
-			if g.sleepCounter == nil {
-				g.sleepCounter = make(map[int]int)
-			}
-			g.sleepCounter[d.minute] = 0
-			g.totalSleep = 0
-			g.dates = append(g.dates, d)
-			guards[id] = g
+			g.id = id
+			g.sleep = "begins"
+			guards = append(guards, g)
 		} else {
-			if _, exists := guards[id].sleepCounter[d.minute]; exists {
-				guards[id].sleepCounter[d.minute]++
-			} else {
-				guards[id].sleepCounter[d.minute] = 1
-			}
-			g = guards[id]
-			g.totalSleep++
-
-			g.dates = append(guards[id].dates, d)
-			guards[id] = g
+			g.id = id
+			guards = append(guards, g)
 		}
-
 	}
 
-	for _, guard := range guards {
-		for _, dat := range guard.dates {
-			var d date
-			d.year = dat.year
-			d.month = dat.month
-			d.day = dat.day
-			d.hour = dat.hour
-			d.minute = dat.minute + 1
-			if dat.sleep == false {
-				d.sleep = false
-			} else {
-				d.sleep = true
-				if _, exists := guard.sleepCounter[d.minute]; exists {
-					guard.sleepCounter[d.minute]++
-					guard.totalSleep++
+	asleep := map[int]int{}
+	var sleepiestGuard, from, guardID int
+	for _, g := range guards {
+		switch g.sleep {
+		case "begins":
+			guardID = g.id
+		case "sleeps":
+			from = g.date.Minute()
+		case "wakes":
+			t := g.date.Minute() - from
+			asleep[guardID] += t
+			if asleep[guardID] > asleep[sleepiestGuard] {
+				sleepiestGuard = guardID
+			}
+		}
+	}
+	fmt.Println(sleepiestGuard)
+
+	minutes := [60]int{}
+	guardID = -1
+	var sleepyminute int
+	for _, g := range guards {
+		if g.sleep == "begins" {
+			guardID = g.id
+			continue
+		}
+		if guardID != sleepiestGuard {
+			continue
+		}
+		switch g.sleep {
+		case "sleeps":
+			from = g.date.Minute()
+		case "wakes":
+			to := g.date.Minute()
+			for i := from; i < to; i++ {
+				minutes[i]++
+				if minutes[i] > minutes[sleepyminute] {
+					sleepyminute = i
 				}
 			}
 		}
 	}
-	sleepiestGuard := 0
-	for key, guard := range guards {
-		if sleepiestGuard == 0 {
-			sleepiestGuard = key
-		}
-		if guard.totalSleep > guards[sleepiestGuard].totalSleep {
-			sleepiestGuard = key
+
+	fmt.Println(sleepiestGuard * sleepyminute)
+
+	minute := map[int]*[60]int{}
+	guardID = -1
+	sleepyminute, sleepiestGuard = 0, 0
+	for _, g := range guards {
+		switch g.sleep {
+		case "begins":
+			guardID = g.id
+			if minute[guardID] == nil {
+				minute[guardID] = &[60]int{}
+			}
+			if minute[sleepiestGuard] == nil {
+				sleepiestGuard = guardID
+			}
+		case "sleeps":
+			from = g.date.Minute()
+		case "wakes":
+			to := g.date.Minute()
+			for i := from; i < to; i++ {
+				minute[guardID][i]++
+				if minute[guardID][i] > minute[sleepiestGuard][sleepyminute] {
+					sleepiestGuard = guardID
+					sleepyminute = i
+				}
+			}
 		}
 	}
-	fmt.Println(sleepiestGuard)
+	fmt.Println(sleepiestGuard * sleepyminute)
 }
