@@ -91,7 +91,7 @@ func main() {
 		fmt.Println(string(i))
 		s2 = s
 		s2 = strings.Replace(s2, string(i), "", -1)
-		s2 = strings.Replace(s2, string(unicode.ToUpper(i)), "", -1)
+		s2 = strings.Replace(s2, string(unicode.ToLower(i)), "", -1)
 		polymer = []rune(s2)
 		lenPolymer := loopPolymer(polymer)
 		fmt.Println(lenPolymer)
