@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"unicode"
 )
 
@@ -47,35 +48,24 @@ func reducePolymer(polymer []rune) []rune {
 	return polymer
 }
 
+func loopPolymer(polymer []rune) int {
+	var newPolymer []rune
+	for {
+		newPolymer = reducePolymer(polymer)
+		if string(polymer) == string(newPolymer) {
+			return len(polymer)
+		} else {
+			polymer = newPolymer
+		}
+	}
+	return 0
+}
+
 func removeUnit(polymer []rune, unit rune) []rune {
-	var first, second bool
-	var tempFirst, tempSecond rune
 	for i := range polymer {
-		if i > len(polymer)-2 {
-			return polymer
-		}
-		first, second = false, false
 
-		if isUpper(polymer[i]) {
-			first = true
-			tempFirst = polymer[i]
-		} else {
-			tempFirst = unicode.ToUpper(polymer[i])
-		}
-
-		if isUpper(polymer[i+1]) {
-			second = true
-			tempSecond = polymer[i+1]
-		} else {
-			tempSecond = unicode.ToUpper(polymer[i+1])
-		}
-
-		if tempFirst != unit && tempSecond != unit {
-			continue
-		}
-
-		if tempFirst == tempSecond && first != second {
-			polymer = append(polymer[:i], polymer[i+2:]...)
+		if unicode.ToUpper(polymer[i]) == unit {
+			polymer = append(polymer[:i], polymer[i+1:]...)
 			break
 		}
 
@@ -92,32 +82,21 @@ func main() {
 
 	}
 
-	var newPolymer, polymer []rune
-	polymer = []rune(s)
+	polymer := []rune(s)
+	fmt.Println(loopPolymer(polymer))
+
+	s2 := s
 	counter := len(polymer)
-	for {
-		newPolymer = reducePolymer(polymer)
-		if string(polymer) == string(newPolymer) {
-			fmt.Println(len(polymer))
-			break
-		} else {
-			polymer = newPolymer
-		}
-	}
 	for i := rune('A'); i <= rune('Z'); i++ {
-		polymer = []rune(s)
 		fmt.Println(string(i))
-		for {
-			newPolymer = removeUnit(polymer, rune(i))
-			if string(polymer) == string(newPolymer) {
-				if len(polymer) < counter {
-					counter = len(polymer)
-					fmt.Println(counter)
-				}
-				break
-			} else {
-				polymer = newPolymer
-			}
+		s2 = s
+		s2 = strings.Replace(s2, string(i), "", -1)
+		s2 = strings.Replace(s2, string(unicode.ToUpper(i)), "", -1)
+		polymer = []rune(s2)
+		lenPolymer := loopPolymer(polymer)
+		fmt.Println(lenPolymer)
+		if counter > lenPolymer {
+			counter = lenPolymer
 		}
 	}
 	fmt.Println(counter)
