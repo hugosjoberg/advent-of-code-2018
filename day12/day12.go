@@ -38,7 +38,7 @@ func matchRules(plant string, rules map[string]byte) string {
 
 func removePaddingLeft(plant string) int {
 	left := 0
-	for i := 0; i < len(plant); i++ {
+	for i := 0; i < 5; i++ {
 		if string(plant[i]) == "." {
 			left++
 		} else if string(plant[i]) == "#" {
@@ -62,19 +62,9 @@ func removePaddingRight(plant string) int {
 
 func plantFinder(initial string, rules map[string]byte) string {
 	var newString bytes.Buffer
-	for i := -5; i < len(initial); i++ {
-		temp := ""
-		if i < 0 {
-			temp = initial[0 : 5+i]
-			temp = padLeft(temp)
-		} else if i > len(initial)-5 {
-			temp = initial[i:]
-			temp = padRight(temp)
-		} else {
-			temp = initial[i : i+5]
-		}
+	for i := 0; i < len(initial)-5; i++ {
+		temp := initial[i : i+5]
 		newString.WriteString(matchRules(temp, rules))
-
 	}
 	return newString.String()
 }
@@ -97,12 +87,14 @@ func main() {
 	sum := 0
 	leftStart := 0
 	initial := initialOriginal
+	paddingLeft := 0
 	for i := 0; i < 20; i++ {
+		initial = "...." + initial + "...."
 		initial = plantFinder(initial, rules)
 		paddingRight := removePaddingRight(initial)
-		paddingLeft := removePaddingLeft(initial)
+		paddingLeft = removePaddingLeft(initial)
 		initial = initial[paddingLeft : len(initial)-paddingRight]
-		leftStart = paddingLeft - 5
+		leftStart = paddingLeft + leftStart - 2
 	}
 
 	for j := 0; j < len(initial); j++ {
@@ -113,33 +105,35 @@ func main() {
 	fmt.Println(sum)
 
 	// Part 2
+	// Part 1
 	sum = 0
-	currentSum := 0
-	average := 0
+	sum2 := 0
+	diff := 0
+	diff2 := 0
 	leftStart = 0
 	initial = initialOriginal
-	for i := 0; i < 50000000000; i++ {
+	paddingLeft = 0
+	for i := 0; i < 100; i++ {
+		initial = "...." + initial + "...."
 		initial = plantFinder(initial, rules)
 		paddingRight := removePaddingRight(initial)
-		paddingLeft := removePaddingLeft(initial)
+		paddingLeft = removePaddingLeft(initial)
 		initial = initial[paddingLeft : len(initial)-paddingRight]
-		leftStart = paddingLeft - 5
-		if i >= 2000 && i < 2100 {
-			for j := 0; j < len(initial); j++ {
-				if string(initial[j]) == "#" {
-					sum = sum + j + leftStart
-				}
-			}
-		} else if i == 2100 {
-			average = sum / 100
-			break
-		}
+		leftStart = paddingLeft + leftStart - 2
 		for j := 0; j < len(initial); j++ {
 			if string(initial[j]) == "#" {
-				currentSum = currentSum + j + leftStart
+				sum = sum + j + leftStart
 			}
 		}
-
+		diff = sum - sum2
+		//fmt.Println(diff - diff2)
+		diff2 = sum - sum2
+		sum2 = sum
 	}
-	fmt.Println(((50000000000 - 2100) * average) + currentSum)
+	fmt.Println(diff)
+	fmt.Println(diff2)
+	fmt.Println(sum)
+	fmt.Println(((50000000000 - 100) * 20) + sum)
 }
+
+//fmt.Println(((50000000000 - 100) * 20) + currentSum)
